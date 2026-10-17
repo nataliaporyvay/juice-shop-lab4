@@ -68,7 +68,8 @@ export const promotionVideo = () => {
       const pug = (await import('pug')).default
       const fn = pug.compile(template)
       let compiledTemplate = fn()
-      compiledTemplate = compiledTemplate.replace('<script id="subtitle"></script>', '<script id="subtitle" type="text/vtt" data-label="English" data-lang="en">' + subs + '</script>')
+      const safeSubs = entities.encode(subs)
+      compiledTemplate = compiledTemplate.replace('<div id="subtitle" style="display: none"></div>', '<div id="subtitle" style="display: none" data-label="English" data-lang="en">' + safeSubs + '</div>')
       res.send(compiledTemplate)
     })
   }
