@@ -9,6 +9,7 @@ import { type Request, type Response, type NextFunction } from 'express'
 import * as security from '../lib/insecurity'
 import { challenges } from '../data/datacache'
 import * as challengeUtils from '../lib/challengeUtils'
+import fs from 'node:fs/promises'
 
 export function servePublicFiles () {
   return ({ params, query }: Request, res: Response, next: NextFunction) => {
@@ -29,7 +30,25 @@ export function servePublicFiles () {
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
       verifySuccessfulPoisonNullByteExploit(file)
 
-      res.sendFile(path.resolve('ftp/', file))
+      const ftpRoot = path.resolve('ftp')
+const resolvedPath = path.resolve(ftpRoot, file)
+const relativePath = path.relative(ftpRoot, resolvedPath)
+
+if (
+  relativePath === '..' ||
+  relativePath.startsWith(`..${path.sep}`) ||
+  path.isAbsolute(relativePath)
+) {
+  res.status(403)
+  next(new Error('File path is outside the permitted directory!'))
+  return
+}
+
+void fs.readFile(resolvedPath)
+  .then((content) => {
+    res.type(path.extname(file)).send(content)
+  })
+  .catch(next)
     } else {
       res.status(403)
       next(new Error('Only .md and .pdf files are allowed!'))
